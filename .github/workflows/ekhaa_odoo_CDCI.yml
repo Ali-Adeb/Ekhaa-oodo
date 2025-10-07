@@ -1,0 +1,43 @@
+
+name: Odoo CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Run basic lint check
+        run: |
+          echo "Checking Odoo module structure..."
+          find . -name "__manifest__.py" || exit 1
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy to Odoo server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.ODOO_EKHAA_IP }}
+          username: ${{ secrets.ODOO_EKHAA_USER }}
+          key: ${{ secrets.ODOO_EKHAA_SSH }}
+          script: |
+            echo "Deploying modules to Odoo server"
+            cd /mnt/disk/odoo_ekha18/custom_addons
+            git clone https://github.com/Ali-Adeb/Ekhaa-oodo.git temp_repo
+            cp -r temp_repo/* .
+            rm -rf temp_repo
+            sudo systemctl restart odoo
+            echo "Deployment completed successfully!"
